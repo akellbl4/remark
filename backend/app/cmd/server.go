@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -38,6 +37,7 @@ import (
 	"github.com/umputun/remark/backend/app/store/engine"
 	"github.com/umputun/remark/backend/app/store/image"
 	"github.com/umputun/remark/backend/app/store/service"
+	"github.com/umputun/remark/backend/app/templates"
 )
 
 // ServerCommand with command line flags and env
@@ -88,17 +88,17 @@ type ServerCommand struct {
 		Dev       bool      `long:"dev" env:"DEV" description:"enable dev (local) oauth2"`
 		Anonymous bool      `long:"anon" env:"ANON" description:"enable anonymous login"`
 		Email     struct {
-			Enable       bool          `long:"enable" env:"ENABLE" description:"enable auth via email"`
-			From         string        `long:"from" env:"FROM" description:"from email address"`
-			Subject      string        `long:"subj" env:"SUBJ" default:"remark42 confirmation" description:"email's subject"`
-			ContentType  string        `long:"content-type" env:"CONTENT_TYPE" default:"text/html" description:"content type"`
-			Host         string        `long:"host" env:"HOST" description:"[deprecated, use --smtp.host] SMTP host"`
-			Port         int           `long:"port" env:"PORT" description:"[deprecated, use --smtp.port] SMTP password"`
-			SMTPPassword string        `long:"passwd" env:"PASSWD" description:"[deprecated, use --smtp.password] SMTP port"`
-			SMTPUserName string        `long:"user" env:"USER" description:"[deprecated, use --smtp.username] enable TLS"`
-			TLS          bool          `long:"tls" env:"TLS" description:"[deprecated, use --smtp.tls] SMTP TCP connection timeout"`
-			TimeOut      time.Duration `long:"timeout" env:"TIMEOUT" default:"10s" description:"[deprecated, use --smtp.timeout] SMTP TCP connection timeout"`
-			MsgTemplate  string        `long:"template" env:"TEMPLATE" description:"message template file"`
+			Enable          bool          `long:"enable" env:"ENABLE" description:"enable auth via email"`
+			From            string        `long:"from" env:"FROM" description:"from email address"`
+			Subject         string        `long:"subj" env:"SUBJ" default:"remark42 confirmation" description:"email's subject"`
+			ContentType     string        `long:"content-type" env:"CONTENT_TYPE" default:"text/html" description:"content type"`
+			Host            string        `long:"host" env:"HOST" description:"[deprecated, use --smtp.host] SMTP host"`
+			Port            int           `long:"port" env:"PORT" description:"[deprecated, use --smtp.port] SMTP password"`
+			SMTPPassword    string        `long:"passwd" env:"PASSWD" description:"[deprecated, use --smtp.password] SMTP port"`
+			SMTPUserName    string        `long:"user" env:"USER" description:"[deprecated, use --smtp.username] enable TLS"`
+			TLS             bool          `long:"tls" env:"TLS" description:"[deprecated, use --smtp.tls] SMTP TCP connection timeout"`
+			TimeOut         time.Duration `long:"timeout" env:"TIMEOUT" default:"10s" description:"[deprecated, use --smtp.timeout] SMTP TCP connection timeout"`
+			MsgTemplatePath string        `long:"template" env:"TEMPLATE" default:"templates/email_confirmation.html.tmpl" description:"path to conformation message template file"`
 		} `group:"email" namespace:"email" env-namespace:"EMAIL"`
 	} `group:"auth" namespace:"auth" env-namespace:"AUTH"`
 
@@ -198,9 +198,11 @@ type NotifyGroup struct {
 		API     string        `long:"api" env:"API" default:"https://api.telegram.org/bot" description:"telegram api prefix"`
 	} `group:"telegram" namespace:"telegram" env-namespace:"TELEGRAM"`
 	Email struct {
-		From                string `long:"fromAddress" env:"FROM" description:"from email address"`
-		VerificationSubject string `long:"verification_subj" env:"VERIFICATION_SUBJ" description:"verification message subject"`
-		AdminNotifications  bool   `long:"notify_admin" env:"ADMIN" description:"notify admin on new comments via ADMIN_SHARED_EMAIL"`
+		AdminNotifications       bool   `long:"notify_admin" env:"ADMIN" description:"notify admin on new comments via ADMIN_SHARED_EMAIL"`
+		From                     string `long:"fromAddress" env:"FROM" description:"from email address"`
+		VerificationSubject      string `long:"verification_subj" env:"VERIFICATION_SUBJ" description:"verification message subject"`
+		VerificationTemplatePath string `long:"verification_tmpl_path" env:"VERIFICATION_TMPL_PATH" default:"./email_confirmation.html.tmpl" description:"path to verification email template"`
+		ReplyTemplatePath        string `long:"reply_tmpl_path" env:"REPLY_TMPL_PATH" default:"./email_reply.html.tmpl" description:"path to reply email template"`
 	} `group:"email" namespace:"email" env-namespace:"EMAIL"`
 }
 
@@ -653,30 +655,7 @@ func (s *ServerCommand) makeCache() (LoadingCache, error) {
 	return nil, errors.Errorf("unsupported cache type %s", s.Cache.Type)
 }
 
-var msgTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-	<meta name="viewport" content="width=device-width" />
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-</head>
-<body>
-<div style="text-align: center; font-family: Arial, sans-serif; font-size: 18px;">
-	<h1 style="position: relative; color: #4fbbd6; margin-top: 0.2em;">Remark42</h1>
-	<p style="position: relative; max-width: 20em; margin: 0 auto 1em auto; line-height: 1.4em;">Confirmation for <b>{{.User}}</b> on site <b>{{.Site}}</b></p>
-	<div style="background-color: #eee; max-width: 20em; margin: 0 auto; border-radius: 0.4em; padding: 0.5em;">
-		<p style="position: relative; margin: 0 0 0.5em 0;">TOKEN</p>
-		<p style="position: relative; font-size: 0.7em; opacity: 0.8;"><i>Copy and paste this text into “token” field on comments page</i></p>
-		<p style="position: relative; font-family: monospace; background-color: #fff; margin: 0; padding: 0.5em; word-break: break-all; text-align: left; border-radius: 0.2em; -webkit-user-select: all; user-select: all;">{{.Token}}</p>
-	</div>
-	<p style="position: relative; margin-top: 2em; font-size: 0.8em; opacity: 0.8;"><i>Sent to {{.Address}}</i></p>
-</div>
-</body>
-</html>
-`
-
 func (s *ServerCommand) addAuthProviders(authenticator *auth.Service) {
-
 	providers := 0
 	if s.Auth.Google.CID != "" && s.Auth.Google.CSEC != "" {
 		authenticator.AddProvider("google", s.Auth.Google.CID, s.Auth.Google.CSEC)
@@ -717,8 +696,14 @@ func (s *ServerCommand) addAuthProviders(authenticator *auth.Service) {
 			Subject:      s.Auth.Email.Subject,
 			ContentType:  s.Auth.Email.ContentType,
 		}
+		fs := templates.Init()
+		tmpl, err := fs.ReadFile(s.Auth.Email.MsgTemplatePath)
+		if err != nil {
+			errors.Wrap(err, "can't read confirmation message")
+			return
+		}
 		sndr := sender.NewEmailClient(params, log.Default())
-		authenticator.AddVerifProvider("email", s.loadEmailTemplate(), sndr)
+		authenticator.AddVerifProvider("email", string(tmpl), sndr)
 	}
 
 	if s.Auth.Anonymous {
@@ -744,22 +729,6 @@ func (s *ServerCommand) addAuthProviders(authenticator *auth.Service) {
 	}
 }
 
-// loadEmailTemplate trying to get template from opts MsgTemplate and default to embedded
-// if not defined or failed to load
-func (s *ServerCommand) loadEmailTemplate() string {
-	tmpl := msgTemplate
-	if s.Auth.Email.MsgTemplate != "" {
-		log.Printf("[DEBUG] load email template from %s", s.Auth.Email.MsgTemplate)
-		b, err := ioutil.ReadFile(s.Auth.Email.MsgTemplate)
-		if err == nil {
-			tmpl = string(b)
-		} else {
-			log.Printf("[WARN] failed to load email template from %s, %v", s.Auth.Email.MsgTemplate, err)
-		}
-	}
-	return tmpl
-}
-
 func (s *ServerCommand) makeNotify(dataStore *service.DataStore, authenticator *auth.Service) (*notify.Service, error) {
 	var notifyService *notify.Service
 	var destinations []notify.Destination
@@ -774,11 +743,13 @@ func (s *ServerCommand) makeNotify(dataStore *service.DataStore, authenticator *
 			destinations = append(destinations, tg)
 		case "email":
 			emailParams := notify.EmailParams{
-				From:                s.Notify.Email.From,
-				VerificationSubject: s.Notify.Email.VerificationSubject,
-				UnsubscribeURL:      s.RemarkURL + "/email/unsubscribe.html",
+				From:                     s.Notify.Email.From,
+				VerificationSubject:      s.Notify.Email.VerificationSubject,
+				VerificationTemplatePath: s.Notify.Email.VerificationTemplatePath,
+				ReplyTemplatePath:        s.Notify.Email.ReplyTemplatePath,
 				// TODO: uncomment after #560 frontend part is ready and URL is known
 				// SubscribeURL:        s.RemarkURL + "/subscribe.html?token=",
+				UnsubscribeURL: s.RemarkURL + "/email/unsubscribe.html",
 				TokenGenFn: func(userID, email, site string) (string, error) {
 					claims := token.Claims{
 						Handshake: &token.Handshake{ID: userID + "::" + email},

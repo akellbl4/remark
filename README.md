@@ -156,6 +156,8 @@ _this is the recommended way to run remark42_
 | notify.email.fromAddress | NOTIFY_EMAIL_FROM      |                          | from email address                              |
 | notify.email.verification_subj | NOTIFY_EMAIL_VERIFICATION_SUBJ | `Email verification` | verification message subject          |
 | notify.email.notify_admin | NOTIFY_EMAIL_ADMIN    | `false`                  | notify admin on new comments via ADMIN_SHARED_EMAIL |
+| notify.email.verification_tmpl_path | NOTIFY_EMAIL_VERIFICATION_TMPL_PATH | `./templates/email_verification.html.tmpl` | path to verification email template |
+| notify.email.reply_tmpl_path        | NOTIFY_EMAIL_REPLY_TMPL_PATH        | `./templates/email_reply.html.tmpl`        | path to reply message template |
 | smtp.host               | SMTP_HOST               |                          | SMTP host                                       |
 | smtp.port               | SMTP_PORT               |                          | SMTP port                                       |
 | smtp.username           | SMTP_USERNAME           |                          | SMTP user name                                  |

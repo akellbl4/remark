@@ -531,21 +531,6 @@ func TestServerAuthHooks(t *testing.T) {
 	app.Wait()
 }
 
-func TestServer_loadEmailTemplate(t *testing.T) {
-	cmd := ServerCommand{}
-	cmd.Auth.Email.MsgTemplate = "testdata/email.tmpl"
-	r := cmd.loadEmailTemplate()
-	assert.Equal(t, "The token is {{.Token}}", r)
-
-	cmd.Auth.Email.MsgTemplate = ""
-	r = cmd.loadEmailTemplate()
-	assert.Contains(t, r, "Remark42</h1>")
-
-	cmd.Auth.Email.MsgTemplate = "bad-file"
-	r = cmd.loadEmailTemplate()
-	assert.Contains(t, r, "Remark42</h1>")
-}
-
 func chooseRandomUnusedPort() (port int) {
 	for i := 0; i < 10; i++ {
 		port = 40000 + int(rand.Int31n(10000))
@@ -597,7 +582,7 @@ func prepServerApp(t *testing.T, fn func(o ServerCommand) ServerCommand) (*serve
 	cmd.Auth.Facebook.CSEC, cmd.Auth.Facebook.CID = "csec", "cid"
 	cmd.Auth.Yandex.CSEC, cmd.Auth.Yandex.CID = "csec", "cid"
 	cmd.Auth.Email.Enable = true
-	cmd.Auth.Email.MsgTemplate = "testdata/email.tmpl"
+	cmd.Auth.Email.MsgTemplatePath = "testdata/email.tmpl"
 	cmd.BackupLocation = "/tmp"
 	cmd.Notify.Type = []string{"email"}
 	cmd.Notify.Email.From = "from@example.org"

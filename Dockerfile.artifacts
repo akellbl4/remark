@@ -46,6 +46,7 @@ RUN \
     export WEB_ROOT=/build/backend/web && \
     sed -i "s|https://demo.remark42.com|http://127.0.0.1:8080|g" ${WEB_ROOT}/*.js && \
     statik --src=${WEB_ROOT} --dest=/build/backend/app/rest -p api -f && \
+    statik --src=/build/backend/app/templates --dest=/build/backend/app -p templates -f && \
     ls -la /build/backend/app/rest/api/statik.go && \
     ls -la /build/backend/web/
 
