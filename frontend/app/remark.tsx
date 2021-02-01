@@ -3,6 +3,7 @@ import { bindActionCreators } from 'redux';
 import { Provider } from 'react-redux';
 import { IntlProvider } from 'react-intl';
 
+import documentReady from 'lib/document-ready';
 import { loadLocale } from 'utils/loadLocale';
 import { getLocale } from 'utils/getLocale';
 import { ConnectedRoot } from 'components/root';
@@ -16,13 +17,7 @@ import { restoreProvider } from 'store/provider/actions';
 import { restoreCollapsedThreads } from 'store/thread/actions';
 import parseQuery from 'utils/parseQuery';
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-async function init(): Promise<void> {
+documentReady(async function init(): Promise<void> {
   __webpack_public_path__ = `${BASE_URL}/web/`;
 
   const node = document.getElementById(NODE_ID);
@@ -51,4 +46,4 @@ async function init(): Promise<void> {
     </IntlProvider>,
     node
   );
-}
+});
