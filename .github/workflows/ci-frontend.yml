@@ -24,7 +24,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           directory: ./frontend
 
-  check:
+  check-transtations:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -46,7 +46,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - run: npx run-p check
+      - run: npm run check:translation
+        working-directory: ./frontend
+
+  check-typescript:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [12.16]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+
+      - run: npm ci --loglevel warn
+        working-directory: ./frontend
+
+      - uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/frontend/node_modules/.cache
+          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - run: npm run check:types
         working-directory: ./frontend
 
   lint:
