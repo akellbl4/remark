@@ -1,11 +1,8 @@
-name: "check js/css bundles file limit"
+name: "check frontend bundles size"
 on:
   pull_request:
-    branches:
-      - master
     paths:
-      - '.github/workflows/ci-test-frontend.yml'
-      - 'frontend/**/*.{ts,tsx,css}'
+      - "frontend/**/*.{ts,tsx,css}"
 jobs:
   size:
     runs-on: ubuntu-latest
