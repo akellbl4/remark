@@ -5,11 +5,11 @@ on:
     branches:
     tags:
     paths:
-      - ".github/workflows/ci-test-frontend.yml"
+      - ".github/workflows/ci-frontend.yml"
       - "frontend/**"
   pull_request:
     paths:
-      - ".github/workflows/ci-test-frontend.yml"
+      - ".github/workflows/ci-frontend.yml"
       - "frontend/**"
 
 jobs:
@@ -19,11 +19,10 @@ jobs:
       CI_JOB_NUMBER: 1
     steps:
       - uses: actions/checkout@v1
-      - uses: andresz1/size-limit-action@v1.0.0
+      - uses: andresz1/size-limit-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          directory: ./frontend
-
+          directory: frontend
   check-transtations:
     runs-on: ubuntu-latest
     strategy:
